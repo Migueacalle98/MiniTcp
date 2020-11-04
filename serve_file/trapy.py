@@ -31,8 +31,8 @@ class ConnException(Exception):
 
 
 # Shared resources across threads
-SLEEP_INTERVAL = 0.005
-TIMEOUT_INTERVAL = 0.01
+SLEEP_INTERVAL = 0.001
+TIMEOUT_INTERVAL = 0.003
 END_ELAPSE = 5
 base = 0
 send_timer = Timer(TIMEOUT_INTERVAL)
@@ -69,7 +69,7 @@ def accept(conn: Conn) -> Conn:
                                   sequence_number=r_number,
                                   ack=headers['sequence_number'],
                                   flags=flags_maker_from_int(syn=True))
-    msg = make_package_from_int(b'\x00', **head)
+    msg = make_package_from_int(b'', head)
     # logger.info('Sending SYNACK')
     base = 0
     threading.Thread(target=_receiving_synack_confirmation,
@@ -102,10 +102,10 @@ def _receiving_synack_confirmation(conn: Conn, r_number):
         con_pack, con_addr_info = receive_pack(conn.server[0], conn.receive_socket)
         con_headers, con_data = split_package_to_int(con_pack)
         if con_headers['destination_port'] == conn.server[1]:
-            if con_headers['ack'] == r_number:
+            if con_headers['ack'] > r_number:
                 with mutex:
                     base = 1
-                    # logger.info(f'synack received')
+                    logger.info(f'synack received')
                     send_timer.stop()
                 break
     logger.info(f'HandShake Complete whit {conn.client[0]}:{conn.client[1]}')
@@ -118,14 +118,14 @@ def dial(address) -> Conn:
     global send_timer
     logger.info('Starting Handshake')
     host, port = parse_address(address)
-    conn = Conn(('localhost', 1515), (host, port))
+    conn = Conn(('localhost', 1515), (host, int(port)))
     # Making Syn Package
     r_number = random.randint(0, 2 ** 16 - 1)
     head = headers_maker_from_int(flags=flags_maker_from_int(syn=True),
                                   sequence_number=r_number,
                                   source_port=conn.client[1],
                                   destination_port=conn.server[1])
-    msg = make_package_from_int(b'\x00', **head)
+    msg = make_package_from_int(b'', head)
     # Sending Syn Package
     # logger.info('Sending Syn')
     base = 0
@@ -170,7 +170,7 @@ def send(conn: Conn, data: bytes) -> int:
     global send_timer
 
     num_bytes = len(data)
-    window_size = packet_size * 20
+    window_size = packet_size * 10
     ini_seq_num = conn.sequence_number
     next_to_send = ini_seq_num
     base = ini_seq_num
@@ -185,10 +185,11 @@ def send(conn: Conn, data: bytes) -> int:
                 head = headers_maker_from_int(source_port=conn.server[1],
                                               destination_port=conn.client[1],
                                               sequence_number=next_to_send,
-                                              ack=base,
-                                              flags=flags_maker_from_int(ack=True))
+                                              ack=0,
+                                              flags=flags_maker_from_int(ack=True),
+                                              checksum=make_checksum(data))
                 pkt_data = data[next_to_send - ini_seq_num:next_to_send - ini_seq_num + packet_size]
-                pkt = make_package_from_int(pkt_data, **head)
+                pkt = make_package_from_int(pkt_data, head)
                 send_pack(pkt, conn.client[0], conn.sender_socket)
             next_to_send += packet_size
 
@@ -217,12 +218,14 @@ def _receive(conn: Conn, num_byes):
         pkt, addr = receive_pack(conn.client[0], conn.receive_socket)
         headers, data = split_package_to_int(pkt)
         _, ack, _, rst, syn, end = flags_splitter_from_int(headers['flags'])
-        if ack and not rst and not syn and not end and headers['checksum']:
-            ack = headers['ack']
-            if ack > base:
-                with mutex:
-                    base = ack
-                    send_timer.stop()
+        if ack and not rst and not syn and not end:
+            if headers['destination_port'] == conn.server[1]:
+                ack = headers['ack']
+                # print(ack,' ack:base', base)
+                if ack > base:
+                    with mutex:
+                        base = ack
+                        send_timer.stop()
 
 
 def recv(conn: Conn, length: int) -> bytes:
@@ -230,6 +233,7 @@ def recv(conn: Conn, length: int) -> bytes:
     expected_seq_num = conn.initial_ack
     all_data = b''
     while len(all_data) < length:
+        #print(expected_seq_num)
         # Get the next packet from the sender
         pkt, addr = receive_pack(conn.server[0], conn.receive_socket)
         headers, data = split_package_to_int(pkt)
@@ -239,30 +243,33 @@ def recv(conn: Conn, length: int) -> bytes:
         if syn:
             head = headers_maker_from_int(flags=flags_maker_from_int(ack=True),
                                           sequence_number=0,
-                                          ack=headers['sequence_number'],
+                                          ack=expected_seq_num,
                                           source_port=conn.client[1],
                                           destination_port=conn.server[1])
-            msg = make_package_from_int(b'\x01', **head)
+            msg = make_package_from_int(b'', head)
             send_pack(msg, conn.server[0], conn.sender_socket)
         elif not end:
-            if seq_num == expected_seq_num and headers['checksum']:
+            if seq_num == expected_seq_num :
                 expected_seq_num += len(data)
+                all_data += data
                 # print(f'Accepted PKT {seq_num}, sending ack {expected_seq_num}')
                 head = headers_maker_from_int(flags=flags_maker_from_int(ack=True),
                                               sequence_number=0,
                                               ack=expected_seq_num,
                                               source_port=conn.client[1],
-                                              destination_port=conn.server[1])
-                pkt = make_package_from_int(data, **head)
+                                              destination_port=conn.server[1],
+                                              checksum= make_checksum(data)
+                                              )
+                pkt = make_package_from_int(data, head)
                 send_pack(pkt, conn.server[0], conn.sender_socket)
-                all_data += data
             else:
                 head = headers_maker_from_int(flags=flags_maker_from_int(ack=True),
                                               sequence_number=0,
                                               ack=expected_seq_num,
                                               source_port=conn.client[1],
-                                              destination_port=headers['source_port'])
-                pkt = make_package_from_int(data, **head)
+                                              destination_port=conn.server[1],
+                                              checksum= make_checksum(data))
+                pkt = make_package_from_int(data, head)
                 send_pack(pkt, conn.server[0], conn.sender_socket)
         else:
             if seq_num == expected_seq_num:
@@ -275,7 +282,7 @@ def recv(conn: Conn, length: int) -> bytes:
                                               ack =  headers['sequence_number'] + 1,
                                               source_port=conn.client[1],
                                               destination_port=conn.server[1])
-                msg = make_package_from_int(b'', **head)
+                msg = make_package_from_int(b'', head)
                 global base
                 global mutex
                 base = 0
@@ -326,7 +333,7 @@ def close(conn: Conn):
                                   sequence_number=conn.sequence_number,
                                   source_port=conn.server[1],
                                   destination_port=conn.client[1])
-    msg = make_package_from_int(b'', **head)
+    msg = make_package_from_int(b'', head)
     base = 0
     threading.Thread(target=_close_sender, args=(conn,)).start()
     while base < 3:
@@ -389,7 +396,7 @@ def _close_sender(conn: Conn):
                                       ack = end_seq_num,
                                       source_port=conn.server[1],
                                       destination_port=conn.client[1])
-        msg = make_package_from_int(b'\x00', **head)
+        msg = make_package_from_int(b'', head)
         send_pack(msg, conn.client[0], conn.sender_socket)
         time.sleep(2 * SLEEP_INTERVAL)
     logger.info(f'connection Ended whit {conn.client[0]}:{conn.client[1]}')

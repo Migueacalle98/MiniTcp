@@ -67,7 +67,7 @@ def make_client(address, file_path):
     data = []
     total = 0
     while True:
-        chunk = recv(conn, 1024)
+        chunk = recv(conn, 4096)
 
         if len(chunk) == 0:
             break

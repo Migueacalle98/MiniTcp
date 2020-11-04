@@ -1,6 +1,28 @@
 import socket
 import random
 
+headers = [ 'source_port',
+            'destination_port',
+            'sequence_number',
+            'ack',
+            'data_offset',
+            'flags',
+            'window_size',
+            'checksum',
+            'urgent'
+            ]
+headers_dic = {
+        'source_port': (0, 2),
+        'destination_port': (2, 2),
+        'sequence_number': (4, 4),
+        'ack': (8, 4),
+        'data_offset': (12, 1),
+        'flags': (13, 1),
+        'window_size': (14, 2),
+        'checksum': (16, 2),
+        'urgent': (18, 2)
+        }
+
 
 def parse_address(address):
     host, port = address.split(':')
@@ -49,33 +71,19 @@ def headers_maker_from_int(source_port=0, destination_port=0, sequence_number=0,
 
 def split_package_to_int(pack: bytes):
     of = 20
-    dic = {'source_port': int.from_bytes(pack[0+of:2+of], byteorder='little', signed=True),
-           'destination_port': int.from_bytes(pack[2+of:4+of], byteorder='little', signed=True),
-           'sequence_number': int.from_bytes(pack[4+of:8+of], byteorder='little', signed=True),
-           'ack': int.from_bytes(pack[8+of:12+of], byteorder='little', signed=True),
-           'data_offset': int.from_bytes([pack[12+of]], byteorder='little', signed=True),
-           'flags': int.from_bytes([pack[13+of]], byteorder='little', signed=True),
-           'window_size': int.from_bytes(pack[14+of:16+of], byteorder='little', signed=True),
-           'checksum': check_checksum(pack[20+of:], pack[16+of:18+of]),
-           'urgent': int.from_bytes(pack[18+of:20+of], byteorder='little', signed=True)}
+    dic = {item: int.from_bytes(pack[headers_dic[item][0] + of:headers_dic[item][0] + headers_dic[item][1] + of],
+                                byteorder='little', signed=True) for item in headers_dic.keys()}
     return dic, pack[20+of:]
 
 
-def make_package_from_int(data: bytes, **dic) -> bytes:
-    header = int.to_bytes(dic['source_port'], 2, byteorder='little', signed=True)
-    header += int.to_bytes(dic['destination_port'], 2, byteorder='little', signed=True)
-    header += int.to_bytes(dic['sequence_number'], 4, byteorder='little', signed=True)
-    header += int.to_bytes(dic['ack'], 4, byteorder='little', signed=True)
-    header += int.to_bytes(dic['data_offset'], 1, byteorder='little', signed=True)
-    header += int.to_bytes(dic['flags'], 1, byteorder='little', signed=True)
-    header += int.to_bytes(dic['window_size'], 2, byteorder='little', signed=True)
-    header += make_checksum(data)
-    header += int.to_bytes(dic['urgent'], 2, byteorder='little', signed=True)
+def make_package_from_int(data: bytes, dic) -> bytes:
+    header = b''
+    for item in headers:
+        header += int.to_bytes(dic[item], headers_dic[item][1], byteorder='little', signed=True)
     return header + data
 
 
 def send_pack(pack, addr, s: socket.socket):
-    # prob = random.randint(0, 100)
     s.sendto(pack, (addr, 0))
 
 
@@ -108,16 +116,17 @@ def empty_header():
             'urgent': b'\x00\x00'}
 
 
-def make_checksum(data: bytes) -> bytes:
+def make_checksum(data: bytes) -> int:
     sum = 0
     for i in range(0, len(data), 2):
         sum += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
-    return int.to_bytes(sum, 2, byteorder='little', signed=True)
+    return sum % (2**14)
 
 
-def check_checksum(data: bytes, checksum: bytes) -> bool:
-    checksum = int.from_bytes(checksum, byteorder='little', signed=True)
+def check_checksum(data: bytes, checksum: int) -> bool:
     sum = 0
     for i in range(0, len(data), 2):
-        sum += int.from_bytes(data[i:i+1], byteorder='little', signed=True)
+        sum += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
+    sum = sum % (2**14)
     return checksum == sum
+
