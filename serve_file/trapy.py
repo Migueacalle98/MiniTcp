@@ -250,8 +250,7 @@ def recv(conn: Conn, length: int) -> bytes:
         _, ack, _, rst, syn, end = flags_splitter_from_int(headers['flags'])
         seq_num = headers['sequence_number']
         if headers['destination_port'] == conn.client[1]:
-            if seq_num == expected_seq_num:
-                if check_checksum(data, headers['checksum']):
+            if seq_num == expected_seq_num and check_checksum(data, headers['checksum']):
                     if end:
                         if len(all_data) > 0:
                             conn.ack = expected_seq_num
