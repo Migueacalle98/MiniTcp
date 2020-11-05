@@ -116,7 +116,7 @@ def make_argumentparser():
     )
     parser.add_argument(
         '--chunk-size',
-        default=1024,
+        default=2048,
         help='file chunks sizes (for server)'
     )
 

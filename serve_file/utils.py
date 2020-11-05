@@ -1,7 +1,8 @@
 import socket
 import random
 
-headers = [ 'source_port',
+# headers in order
+_headers = ['source_port',
             'destination_port',
             'sequence_number',
             'ack',
@@ -11,7 +12,9 @@ headers = [ 'source_port',
             'checksum',
             'urgent'
             ]
-headers_dic = {
+
+# for each header returns the its initial byte on the head and its size
+_headers_dic = {
         'source_port': (0, 2),
         'destination_port': (2, 2),
         'sequence_number': (4, 4),
@@ -71,15 +74,15 @@ def headers_maker_from_int(source_port=0, destination_port=0, sequence_number=0,
 
 def split_package_to_int(pack: bytes):
     of = 20
-    dic = {item: int.from_bytes(pack[headers_dic[item][0] + of:headers_dic[item][0] + headers_dic[item][1] + of],
-                                byteorder='little', signed=True) for item in headers_dic.keys()}
+    dic = {item: int.from_bytes(pack[_headers_dic[item][0] + of:_headers_dic[item][0] + _headers_dic[item][1] + of],
+                                byteorder='little', signed=True) for item in _headers_dic.keys()}
     return dic, pack[20+of:]
 
 
 def make_package_from_int(data: bytes, dic) -> bytes:
     header = b''
-    for item in headers:
-        header += int.to_bytes(dic[item], headers_dic[item][1], byteorder='little', signed=True)
+    for item in _headers:
+        header += int.to_bytes(dic[item], _headers_dic[item][1], byteorder='little', signed=True)
     return header + data
 
 
@@ -117,16 +120,16 @@ def empty_header():
 
 
 def make_checksum(data: bytes) -> int:
-    sum = 0
+    total = 0
     for i in range(0, len(data), 2):
-        sum += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
-    return sum % (2**14)
+        total += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
+    return total % (2**14)
 
 
 def check_checksum(data: bytes, checksum: int) -> bool:
-    sum = 0
+    total = 0
     for i in range(0, len(data), 2):
-        sum += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
-    sum = sum % (2**14)
-    return checksum == sum
+        total += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
+    total = total % (2**14)
+    return checksum == total
 
