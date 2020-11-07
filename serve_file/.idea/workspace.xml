@@ -2,11 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3b558c10-5552-4a93-8622-a1775288239e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__main__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/server.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/trapy.py" beforeDir="false" afterPath="$PROJECT_DIR$/trapy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../tests/test_serve_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tests/test_serve_file.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../trapy/socket_trapy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../trapy/trapy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../trapy/utils.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -53,7 +59,7 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -126,6 +132,11 @@
       <workItem from="1604356472991" duration="20489000" />
       <workItem from="1604426528961" duration="5476000" />
       <workItem from="1604435201319" duration="10155000" />
+      <workItem from="1604692410656" duration="59000" />
+      <workItem from="1604692750439" duration="8906000" />
+      <workItem from="1604706815597" duration="338000" />
+      <workItem from="1604707574268" duration="1619000" />
+      <workItem from="1604710142578" duration="7885000" />
     </task>
     <servers />
   </component>
@@ -137,7 +148,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>

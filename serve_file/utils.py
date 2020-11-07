@@ -1,5 +1,12 @@
 import socket
-import random
+from multiprocessing.pool import ThreadPool
+import time
+from timer import Timer
+
+
+class ConnException(Exception):
+    pass
+
 
 # headers in order
 _headers = ['source_port',
@@ -75,18 +82,19 @@ def headers_maker_from_int(source_port=0, destination_port=0, sequence_number=0,
 def split_package_to_int(pack: bytes):
     of = 20
     dic = {item: int.from_bytes(pack[_headers_dic[item][0] + of:_headers_dic[item][0] + _headers_dic[item][1] + of],
-                                byteorder='little', signed=True) for item in _headers_dic.keys()}
-    return dic, pack[20+of:]
+                                byteorder='big', signed=False) for item in _headers_dic.keys()}
+    return dic, pack[dic['data_offset']+of:]
 
 
 def make_package_from_int(data: bytes, dic) -> bytes:
     header = b''
     for item in _headers:
-        header += int.to_bytes(dic[item], _headers_dic[item][1], byteorder='little', signed=True)
+        header += int.to_bytes(dic[item], _headers_dic[item][1], byteorder='big', signed=False)
     return header + data
 
 
 def send_pack(pack, addr, s: socket.socket):
+    # print(f'Sending pack to {addr}')
     s.sendto(pack, (addr, 0))
 
 
@@ -122,14 +130,14 @@ def empty_header():
 def make_checksum(data: bytes) -> int:
     total = 0
     for i in range(0, len(data), 2):
-        total += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
-    return total % (2**14)
+        total += int.from_bytes(data[i:i + 1], byteorder='big', signed=False)
+    return total % (2**15-1)
 
 
 def check_checksum(data: bytes, checksum: int) -> bool:
     total = 0
     for i in range(0, len(data), 2):
-        total += int.from_bytes(data[i:i + 1], byteorder='little', signed=True)
-    total = total % (2**14)
+        total += int.from_bytes(data[i:i + 1], byteorder='big', signed=False)
+    total = total % (2**15-1)
     return checksum == total
 

@@ -17,22 +17,21 @@ class Conn:
     sender_socket: socket.socket
     receive_socket: socket.socket
 
-    def __init__(self, client: tuple, server: tuple):
+    def __init__(self, client: tuple, server: tuple, is_client=True):
         self.client = client
         self.server = server
         self.sender_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
         self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
         self.receive_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-        self.receive_socket.bind(('localhost', 0))
-
-
-class ConnException(Exception):
-    pass
+        if is_client:
+            self.receive_socket.bind((f'{client[0]}', 0))
+        else:
+            self.receive_socket.bind((f'{server[0]}', 0))
 
 
 # Shared resources across threads
 SLEEP_INTERVAL = 0.001
-TIMEOUT_INTERVAL = 0.003
+TIMEOUT_INTERVAL = 0.01
 END_ELAPSE = 5
 base = 0
 send_timer = Timer(TIMEOUT_INTERVAL)
@@ -44,7 +43,8 @@ end_timer = Timer(END_ELAPSE)
 
 def listen(address: str) -> Conn:
     host, port = parse_address(address)
-    conn = Conn((None, None), (host, int(port)))
+    logger.info(f'Socket about to bind')
+    conn = Conn((None, None), (host, int(port)), is_client=False)
     logger.info(f'Socket binded to {host}:{port}')
     return conn
 
@@ -57,20 +57,23 @@ def accept(conn: Conn) -> Conn:
     # expecting sync
     logger.info(f'Expecting HandShake')
     while True:
-        pack, addr_info = receive_pack(conn.server[0], conn.receive_socket)
+        pack, addr_info = receive_pack(None, conn.receive_socket)
         headers, data = split_package_to_int(pack)
         if headers['destination_port'] == conn.server[1]:
             if flags_splitter_from_int(headers['flags'])[4]:
                 break
-    r_number = random.randint(0, 2 ** 16 - 1)
+    print('Sending SynACK')
+    # r_number = random.randint(0, 2 ** 16 - 1)
+    r_number = 0
     conn.client = (addr_info[0], headers['source_port'])
     conn.sequence_number = r_number
     # making SYNACK
     head = headers_maker_from_int(source_port=conn.server[1],
                                   destination_port=headers['source_port'],
                                   sequence_number=r_number,
-                                  ack=headers['sequence_number'],
-                                  flags=flags_maker_from_int(syn=True)
+                                  ack=headers['sequence_number'] + 1,
+                                  flags=flags_maker_from_int(syn=True),
+                                  data_offset=160
                                   )
     msg = make_package_from_int(b'', head)
     # logger.info('Sending SYNACK')
@@ -80,7 +83,7 @@ def accept(conn: Conn) -> Conn:
 
     while base < 1:
         mutex.acquire()
-        send_pack(msg, addr_info[0], conn.sender_socket)
+        send_pack(msg, conn.client[0], conn.sender_socket)
         # receiving SYNACK confirmation
         if not send_timer.running():
             send_timer.start()
@@ -103,7 +106,7 @@ def _accept_thread(conn: Conn, r_number):
     global base
 
     while True:
-        con_pack, con_addr_info = receive_pack(conn.server[0], conn.receive_socket)
+        con_pack, con_addr_info = receive_pack(None, conn.receive_socket)
         con_headers, con_data = split_package_to_int(con_pack)
         if con_headers['destination_port'] == conn.server[1]:
             if con_headers['ack'] > r_number:
@@ -123,13 +126,14 @@ def dial(address) -> Conn:
 
     logger.info('Starting Handshake')
     host, port = parse_address(address)
-    conn = Conn(('localhost', 1515), (host, int(port)))
+    conn = Conn(('0.0.0.0', 1515), (host, int(port)))
     # Making Syn Package
     r_number = random.randint(0, 2 ** 16 - 1)
     head = headers_maker_from_int(flags=flags_maker_from_int(syn=True),
                                   sequence_number=r_number,
                                   source_port=conn.client[1],
-                                  destination_port=conn.server[1]
+                                  destination_port=conn.server[1],
+                                  data_offset=20
                                   )
     msg = make_package_from_int(b'', head)
     # Sending Syn Package
@@ -159,10 +163,10 @@ def _dial_thread(conn: Conn, r_number: int):
 
     while True:
         # receiving SYNACK confirmation
-        con_pack, con_addr_info = receive_pack(conn.server[0], conn.receive_socket)
+        con_pack, con_addr_info = receive_pack(None, conn.receive_socket)
         con_headers, con_data = split_package_to_int(con_pack)
         if con_headers['destination_port'] == conn.client[1]:
-            if con_headers['ack'] == r_number:
+            if con_headers['ack'] == r_number + 1:
                 with mutex:
                     logger.info('SYNACK received')
                     base = 1
@@ -221,45 +225,45 @@ def _send_thread(conn: Conn, num_byes):
     global mutex
     global base
     global send_timer
+    global window_size
 
     ini_seq_num = conn.sequence_number
     while base < ini_seq_num + num_byes:
-        pkt, addr = receive_pack(conn.client[0], conn.receive_socket)
+        pkt, addr = receive_pack(conn.server[0], conn.receive_socket)
         headers, data = split_package_to_int(pkt)
         _, ack, _, rst, syn, end = flags_splitter_from_int(headers['flags'])
-        if ack and not rst and not syn and not end and check_checksum(data, headers['checksum']):
+        if ack and check_checksum(data, headers['checksum']):
             if headers['destination_port'] == conn.server[1]:
                 ack = headers['ack']
-                # print(ack,' ack:base', base)
                 if ack > base:
-                    window_size = headers['window_size']
+                    # window_size = headers['window_size']
                     with mutex:
                         base = ack
                         send_timer.stop()
 
 
 def recv(conn: Conn, length: int) -> bytes:
-    # logger.info(f'Receiving Data...')
+    logger.info(f'Receiving Data...')
     expected_seq_num = conn.ack
     all_data = b''
     while len(all_data) < length:
-        # print(expected_seq_num)
         # Get the next packet from the sender
-        pkt, addr = receive_pack(conn.server[0], conn.receive_socket)
+        pkt, addr = receive_pack(None, conn.receive_socket)
         headers, data = split_package_to_int(pkt)
         _, ack, _, rst, syn, end = flags_splitter_from_int(headers['flags'])
         seq_num = headers['sequence_number']
         if headers['destination_port'] == conn.client[1]:
+            # print('Got Pack ACK:', seq_num, ' expected:', expected_seq_num)
             if seq_num == expected_seq_num and check_checksum(data, headers['checksum']):
-                    if end:
-                        if len(all_data) > 0:
-                            conn.ack = expected_seq_num
-                            return all_data
-                        return close_receiver(conn)
-                    if not syn and ack:
-                        expected_seq_num += len(data)
-                        all_data += data
-                        # print(f'Accepted PKT {seq_num}, sending ack {expected_seq_num}')
+                if end:
+                    if len(all_data) > 0:
+                        conn.ack = expected_seq_num
+                        return all_data
+                    return close_receiver(conn)
+                if not syn and ack:
+                    expected_seq_num += len(data)
+                    all_data += data
+                    # print(f'Accepted PKT {seq_num}, sending ack {expected_seq_num}')
             # Send back an ACK
             head = headers_maker_from_int(flags=flags_maker_from_int(ack=True),
                                           sequence_number=0,
@@ -282,7 +286,8 @@ def close_receiver(conn: Conn):
                                   sequence_number=r_number,
                                   ack=conn.ack + 1,
                                   source_port=conn.client[1],
-                                  destination_port=conn.server[1]
+                                  destination_port=conn.server[1],
+                                  data_offset=20
                                   )
     msg = make_package_from_int(b'', head)
     global base
@@ -315,7 +320,7 @@ def _close_receiver_thread(conn: Conn, r_number: int):
     global base
     while base < 1:
         # receiving ENDACK confirmation
-        con_pack, con_addr_info = receive_pack(conn.server[0], conn.receive_socket)
+        con_pack, con_addr_info = receive_pack(None, conn.receive_socket)
         con_headers, con_data = split_package_to_int(con_pack)
         if con_headers['destination_port'] == conn.client[1]:
             if con_headers['ack'] == r_number:
@@ -334,7 +339,8 @@ def close(conn: Conn):
     head = headers_maker_from_int(flags=flags_maker_from_int(end=True),
                                   sequence_number=conn.sequence_number,
                                   source_port=conn.server[1],
-                                  destination_port=conn.client[1])
+                                  destination_port=conn.client[1],
+                                  data_offset=20)
     msg = make_package_from_int(b'', head)
     base = 0
     threading.Thread(target=_close_thread, args=(conn,)).start()
@@ -378,7 +384,7 @@ def _close_thread(conn: Conn):
     end_received = False
     end_ack_received = False
     while base < 3:
-        pack, addr_info = receive_pack(conn.server[0], conn.receive_socket)
+        pack, addr_info = receive_pack(None, conn.receive_socket)
         headers, data = split_package_to_int(pack)
         _, ack, _, rst, syn, end = flags_splitter_from_int(headers['flags'])
         if headers['destination_port'] == conn.server[1]:
@@ -397,7 +403,8 @@ def _close_thread(conn: Conn):
                                       sequence_number=conn.sequence_number,
                                       ack=end_seq_num,
                                       source_port=conn.server[1],
-                                      destination_port=conn.client[1])
+                                      destination_port=conn.client[1],
+                                      data_offset=20)
         msg = make_package_from_int(b'', head)
         send_pack(msg, conn.client[0], conn.sender_socket)
         time.sleep(2 * SLEEP_INTERVAL)

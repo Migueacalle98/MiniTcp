@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from trapy import listen, accept, dial, recv, send, close
 
 # uncomment to use working implementation as example
-# sfrom socket_trapy import listen, accept, dial, recv, send, close
+# from socket_trapy import listen, accept, dial, recv, send, close
 
 logging.basicConfig(format='%(asctime)-15s %(levelname)s %(message)s')
 logger = logging.getLogger('serve-file')
