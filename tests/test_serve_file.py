@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+import time
 from functools import partial
 
 from mininet.link import TCLink
@@ -26,22 +27,24 @@ class TestServeFile(unittest.TestCase):
         self.net.start()
 
     def test_download_small(self):
-        server_file = 'tests/data/small.txt'
-        client_file = 'tests/tmp-data/small.txt'
+        server_file = 'tests/data/medium.txt'
+        client_file = 'tests/tmp-data/medium.txt'
 
         h1, h2 = self.net.get('h1', 'h2')
 
         address = '{}:8888'.format(h1.IP())
 
-        h1.cmdPrint(
-            '{} -mserve_file --accept {} --file {} &'
+        h1.cmdPrint('{} ./serve_file/__main__.py --accept {} --file {} &'
             .format(config.PYTHON, address, server_file)
-        )
-        wait_for(partial(is_port_open, address, h1))
+        )           
+        
+        # wait_for(partial(is_port_open, address, h1))
+        
         h2.cmdPrint(
-            '{} -mserve_file --dial {} --file {}'
+            '{} ./serve_file/__main__.py --dial {} --file {}'
             .format(config.PYTHON, address, client_file)
         )
+            
         status = int(h2.cmd('echo $?'))
 
         self.assertEqual(status, 0)

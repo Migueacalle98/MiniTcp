@@ -57,7 +57,7 @@ def make_server(address, file_path, chunk_size):
     # executor.shutdown(True)
 
 
-def make_client(address, file_path):
+def make_client(address, file_path, chunk_size):
     logger.info('client running')
 
     conn = dial(address)
@@ -67,7 +67,7 @@ def make_client(address, file_path):
     data = []
     total = 0
     while True:
-        chunk = recv(conn, 4096)
+        chunk = recv(conn, chunk_size)
 
         if len(chunk) == 0:
             break
@@ -89,7 +89,7 @@ def main():
     args = make_argumentparser().parse_args()
 
     if args.dial:
-        make_client(args.dial, args.file)
+        make_client(args.dial, args.file, args.chunk_size)
     elif args.accept:
         make_server(args.accept, args.file, args.chunk_size)
     else:
@@ -116,7 +116,7 @@ def make_argumentparser():
     )
     parser.add_argument(
         '--chunk-size',
-        default=2048,
+        default=4096,
         help='file chunks sizes (for server)'
     )
 
