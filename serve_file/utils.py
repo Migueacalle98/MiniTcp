@@ -7,6 +7,7 @@ from timer import Timer
 class ConnException(Exception):
     pass
 
+states = ['closed', 'listen', 'syn_recv', 'syn_sent', 'established', 'fin_wait_1', 'fin_wait_2', 'time_wait', 'close_wait', 'last_ack']
 
 # headers in order
 _headers = ['source_port',
@@ -95,10 +96,18 @@ def make_package_from_int(data: bytes, dic) -> bytes:
 
 def send_pack(pack, addr, s: socket.socket):
     # print(f'Sending pack to {addr}')
+    # soc = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    # soc.sendto(pack, (addr, 0))
+    # soc.close()
     s.sendto(pack, (addr, 0))
 
 
 def receive_pack(host, s: socket.socket):
+    # soc = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    # soc.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+    # soc.bind((host, 0))
+    # pack, addr_info = soc.recvfrom(65565)
+    # soc.close()
     pack, addr_info = s.recvfrom(65565)
     return pack, addr_info
 
@@ -131,13 +140,13 @@ def make_checksum(data: bytes) -> int:
     total = 0
     for i in range(0, len(data), 2):
         total += int.from_bytes(data[i:i + 1], byteorder='big', signed=False)
-    return total % (2**15-1)
+    return total % (2**16-1)
 
 
 def check_checksum(data: bytes, checksum: int) -> bool:
     total = 0
     for i in range(0, len(data), 2):
         total += int.from_bytes(data[i:i + 1], byteorder='big', signed=False)
-    total = total % (2**15-1)
+    total = total % (2**16-1)
     return checksum == total
 
