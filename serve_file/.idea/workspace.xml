@@ -3,13 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="3b558c10-5552-4a93-8622-a1775288239e" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__main__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/trapy.py" beforeDir="false" afterPath="$PROJECT_DIR$/trapy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../tests/test_serve_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/../tests/test_serve_file.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -93,8 +86,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.Server" />
       <item itemvalue="Python.Client" />
+      <item itemvalue="Python.Server" />
     </list>
   </component>
   <component name="SvnConfiguration">
@@ -137,7 +130,7 @@
       <workItem from="1604961809143" duration="2656000" />
       <workItem from="1605018266868" duration="7713000" />
       <workItem from="1605028971326" duration="11738000" />
-      <workItem from="1605044649879" duration="3936000" />
+      <workItem from="1605044649879" duration="4178000" />
     </task>
     <task id="LOCAL-00001" summary="Starting Mininet Tests">
       <created>1604718346867</created>
@@ -146,7 +139,14 @@
       <option name="project" value="LOCAL" />
       <updated>1604718346867</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Project Remade, using state machine">
+      <created>1605048622224</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1605048622224</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -167,7 +167,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Starting Mininet Tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="Starting Mininet Tests" />
+    <MESSAGE value="Project Remade, using state machine" />
+    <option name="LAST_COMMIT_MESSAGE" value="Project Remade, using state machine" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
