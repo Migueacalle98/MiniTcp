@@ -29,4 +29,7 @@ class Timer(object):
             return False
         else:
             return time.time() - self._start_time >= self._duration
+
+    def restart(self):
+        self._start_time = time.time()
     

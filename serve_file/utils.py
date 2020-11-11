@@ -1,4 +1,5 @@
 import socket
+import random
 from multiprocessing.pool import ThreadPool
 import time
 from timer import Timer
@@ -99,7 +100,11 @@ def send_pack(pack, addr, s: socket.socket):
     # soc = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
     # soc.sendto(pack, (addr, 0))
     # soc.close()
+    r = random.randint(0,100)
+    #if random.randint(0, 100) > 4:
     s.sendto(pack, (addr, 0))
+    #else:
+    #    print('Drop!!')
 
 
 def receive_pack(host, s: socket.socket):
