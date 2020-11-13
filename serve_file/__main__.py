@@ -67,7 +67,7 @@ def make_client(address, file_path, chunk_size):
     data = []
     total = 0
     while True:
-        chunk = recv(conn, chunk_size)
+        chunk = recv(conn, 1024)
 
         if len(chunk) == 0:
             break
@@ -116,7 +116,7 @@ def make_argumentparser():
     )
     parser.add_argument(
         '--chunk-size',
-        default=4096,
+        default=4096 * 4,
         help='file chunks sizes (for server)'
     )
 

@@ -1,9 +1,6 @@
 import socket
 import random
-from multiprocessing.pool import ThreadPool
 import time
-from timer import Timer
-
 
 class ConnException(Exception):
     pass
@@ -43,11 +40,6 @@ def parse_address(address):
         host = 'localhost'
 
     return host, int(port)
-
-
-def parse_ip(ip_address):
-    add = ip_address.split('.')
-    return (int(item) for item in add)
 
 
 def flags_splitter_from_int(flags: int):
@@ -96,50 +88,13 @@ def make_package_from_int(data: bytes, dic) -> bytes:
 
 
 def send_pack(pack, addr, s: socket.socket):
-    # print(f'Sending pack to {addr}')
-    # soc = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-    # soc.sendto(pack, (addr, 0))
-    # soc.close()
-    r = random.randint(0,100)
-    #if random.randint(0, 100) > 4:
+    time.sleep(0.002)
     s.sendto(pack, (addr, 0))
-    #else:
-    #    print('Drop!!')
 
 
 def receive_pack(host, s: socket.socket):
-    # soc = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-    # soc.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-    # soc.bind((host, 0))
-    # pack, addr_info = soc.recvfrom(65565)
-    # soc.close()
     pack, addr_info = s.recvfrom(65565)
     return pack, addr_info
-
-
-def empty_dic():
-    return {'source_port': 0,
-            'destination_port': 0,
-            'sequence_number': 0,
-            'ack': 0,
-            'data_offset': 0,
-            'flags': 0,
-            'window_size': 0,
-            'checksum': 0,
-            'urgent': 0}
-
-
-def empty_header():
-    return {'source_port': b'\x00\x00',
-            'destination_port': b'\x00\x00',
-            'sequence_number': b'\x00\x00\x00\x00',
-            'ack': b'\x00\x00\x00\x00',
-            'data_offset': b'\x00',
-            'flags': b'\x00',
-            'window_size': b'\x00\x00',
-            'checksum': b'\x00\x00',
-            'urgent': b'\x00\x00'}
-
 
 def make_checksum(data: bytes) -> int:
     total = 0
