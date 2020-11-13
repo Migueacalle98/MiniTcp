@@ -1,52 +1,28 @@
 # Trapy
 
-> Mi Nombre Es La Tiza (ymicorret@mbien.com)
+> Miguel Angel Gonzalez Calles 
 
-Mi proyecto por supuesto que es la tiza.
+Aplication Layer Project in Python.
+It has been implemented the TCP protocol, without an appropied checksum computation, using only, raw_sockets, meneing using only network layer sockets.
 
-## Recomendaciones
+It has been added the original roject orientation.
 
-### Editor de texto
+# Problems:
 
-Se recomienda utilizar `VSCode`.
+- Really slow compared to normal sockets
+- Conn does not manage multiole clients
+- The only part of TCP protocola that it does not propertly computes is the checksum header.
 
-### *Virtual Environment*.
+# Set Up:
 
-Instalar un ambiente virtual que contenga las dependencias de su proyecto.
+to get the initial test files run:
 
-```bash
-virutualenv --python=python3.7 venv
-```
+sudo ./create_data.sh
 
-Para activar el *virtual environment*
+# Testing:
+ 
+> Simply run on the root of the project:
 
-```bash
-. venv/bin/activate
-```
+sudo python3 -m unittest discover tests
 
-Para desactivarlo
 
-```bash
-deactivate
-```
-
-`VSCode` se integra correctamente con este tipo de flujo de trabajo, usando la
-extensión [ms-python.python](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
-
-### *Linters*
-
-Utilizar un *linter* que valide estáticamente su código. Se recomienda utilizar
-`flake8`.
-
-```bash
-pip install flake8
-```
-
-En la configuración de `VSCode` puede utilizar
-
-```json
-{
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true
-}
-```

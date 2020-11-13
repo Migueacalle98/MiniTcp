@@ -27,8 +27,8 @@ class TestServeFile(unittest.TestCase):
         self.net.start()
 
     def test_download_small(self):
-        server_file = 'tests/data/medium.txt'
-        client_file = 'tests/tmp-data/medium.txt'
+        server_file = 'tests/data/small.txt'
+        client_file = 'tests/tmp-data/small.txt'
 
         h1, h2 = self.net.get('h1', 'h2')
 
