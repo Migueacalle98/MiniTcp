@@ -34,8 +34,8 @@ def handle(conn, file_path, chunk_size):
 def make_server(address, file_path, chunk_size):
     logger.info('server running')
 
-    executor = ThreadPoolExecutor()
-    connections = []
+    # executor = ThreadPoolExecutor()
+    # connections = []
 
     server = listen(address)
 

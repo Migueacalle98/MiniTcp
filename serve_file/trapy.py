@@ -22,9 +22,10 @@ class Conn:
         self.state = 'closed'
         self.sequence_number = 0
         self.last_ack = 0
-        self.window_size = 5 * self.packet_size
+        self.window_size = 5
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
         self.recv_buffer = b''
+        self.cache = {}
         self._rtt = 1.0
         self._dev_rtt = 0.1
         self._rtt_seq = None
@@ -80,6 +81,9 @@ class Conn:
                             if len(self.recv_buffer) + len(data) < self.max_buffer_size:
                                 self.recv_buffer += data
                                 self.last_ack += len(data)
+                                self._update_cache()
+                        elif headers['sequence_number'] > self.last_ack:
+                            self.cache[headers['sequence_number']] = data
                         self.send_ack(data)
                     if end:
                         self.last_ack = headers['sequence_number'] + 1
@@ -112,7 +116,7 @@ class Conn:
 
     def send_package(self, flags=0, data=b'', seq_num=None):
         # Computing rtt
-        if self._rtt_seq is None and len(data)>0:
+        if self._rtt_seq is None and len(data) > 0:
             self._rtt_seq = self.sequence_number if seq_num is None else seq_num
             self._rtt_start_time = time.time()
         head = headers_maker_from_int(source_port=self.source_port,
@@ -159,6 +163,18 @@ class Conn:
         self._rtt_seq = None
         self._rtt_start_time = None
 
+    def _update_cache(self):
+        while True:
+            try:
+                index = self.last_ack
+                data = self.cache[self.last_ack]
+                self.recv_buffer += data
+                self.last_ack += len(data)
+                self.cache[index] = None
+            except KeyError:
+                break
+
+
 SLEEP_INTERVAL = 0.001
 END_ELAPSE = 5
 
@@ -202,15 +218,18 @@ def send(conn: Conn, data: bytes) -> int:
     # logger.info(f'Sending Data...')
     if conn.state == 'established':
         while base < ini_seq_num + num_bytes:
-            while next_to_send <= base + conn.window_size:
+            while next_to_send <= base + conn.packet_size * conn.window_size:
                 if next_to_send < ini_seq_num + num_bytes:
                     pkt_data = data[next_to_send - ini_seq_num:next_to_send - ini_seq_num + conn.packet_size]
                     conn.send_package(0, pkt_data, next_to_send)
                 next_to_send += conn.packet_size
-            if conn.timeout() < (time.time() - start_time) or conn.sequence_number > base:
+            if conn.timeout() < (time.time() - start_time) and conn.sequence_number > base:
                 base = conn.sequence_number
                 next_to_send = base
                 start_time = time.time()
+                conn.window_size *= 2
+            if conn.timeout() > (time.time() - start_time):
+                conn.window_size = max(conn.window_size // 2, 1)
         return base - ini_seq_num
     else:
         raise ConnException
