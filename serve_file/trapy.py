@@ -223,12 +223,16 @@ def send(conn: Conn, data: bytes) -> int:
                     pkt_data = data[next_to_send - ini_seq_num:next_to_send - ini_seq_num + conn.packet_size]
                     conn.send_package(0, pkt_data, next_to_send)
                 next_to_send += conn.packet_size
-            if conn.timeout() < (time.time() - start_time) and conn.sequence_number > base:
+            if conn.timeout() < (time.time() - start_time):
                 base = conn.sequence_number
                 next_to_send = base
                 start_time = time.time()
-                conn.window_size *= 2
+                if conn.sequence_number > base:
+                    conn.window_size *= 2
             if conn.timeout() > (time.time() - start_time):
+                base = conn.sequence_number
+                next_to_send = base
+                start_time = time.time()
                 conn.window_size = max(conn.window_size // 2, 1)
         return base - ini_seq_num
     else:
